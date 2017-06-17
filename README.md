@@ -57,5 +57,6 @@ Contact happynoom@163.com to report any bugs.
 
 [3] Ioffe S, Szegedy C. Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift[C]. international conference on machine learning, 2015: 448-456.
 
-
+## keras version repository
+https://github.com/happynoom/DeepTrade_keras
 
