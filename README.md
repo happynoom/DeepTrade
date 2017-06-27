@@ -13,7 +13,7 @@ A LSTM model using Risk Estimation loss function for trades in market
 
 ## Network Construction
 
-   LSTM network [1] is effective with learning knowleges from time series. A fixed length of history data (i.e., 30 days) is used to plan trade of next day. We make the network output a real value (p) between 0 and 1, which means how much position (in percent) of the stock we should hold to tomorrow. So that if the rate of price change is r next day, out profit will be p*r. If r is negtive, we lost our money. Therefore, we define a Loss Function (called Risk Estimation) for the LSTM network:
+   LSTM network [1] is effective with learning knowleges from time series. A fixed length of history data (i.e., 30 days) is used to plan trade of next day. We make the network output a real value (p) between 0 and 1, which means how much position (percentage of capital) of the stock we should hold to tomorrow. So that if the rate of price change is r next day, out profit will be p*r. If r is negtive, we lost our money. Therefore, we define a Loss Function (called Risk Estimation) for the LSTM network:
 
    Loss = -100. * mean(P * R)
 
@@ -27,7 +27,7 @@ P is a set of our output, and R is the set of corresponding rates of price chang
 
 ## Trading Plans
 
-   Every day, at the time before market close (nearer is better), input history features into the network, then we get an output value p. This p mean an advice of next-day's position. If p=0, we should sell all we have before close. If p is positive, we should keep a poistion of p to next day, sell the redundant or buy the insufficient.
+   Every day, at the time before market close (nearer is better), input history features into the network, then we get an output value p. This p mean an advice of next-day's position (percentage of capital). If p=0, we should sell all we have before close. If p is positive, we should keep a poistion of p to next day, sell the redundant or buy the insufficient.
 
 ## Experimental Results
 
