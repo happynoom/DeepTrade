@@ -47,7 +47,7 @@ The author is Xiaoyu Fang from China. Please quot the source whenever you use it
 
 ## Bug Report
 
-Contact happynoom@163.com to report any bugs.
+Contact happynoom@163.com to report any bugs. QQ Group:370191896
 
 ## Reference
 
