@@ -182,7 +182,7 @@ def predict(features, labels):
     input_size = 61
     train_steps = 5000
     batch_size = 32
-    learning_rate = 0.02
+    learning_rate = 0.001
     hidden_size = 8
     nclasses = 1
     trader = SmartTrader(step, input_size, learning_rate, hidden_size, nclasses)
