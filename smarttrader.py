@@ -23,10 +23,11 @@ from chart import extract_feature
 import numpy
 from tensorflow.contrib.layers.python.layers.layers import batch_norm
 import sys
+from numpy.random import seed
 
 
 class SmartTrader(object):
-    def __init__(self, step, input_size, starter_learning_rate, hidden_size, nclasses, decay_step=500, decay_rate=0.9, cost=0.0002):
+    def __init__(self, step, input_size, starter_learning_rate, hidden_size, nclasses, decay_step=500, decay_rate=1.0, cost=0.0002):
         '''
         Initialize parameters for the SmartTrader
         :param step: time steps of the feature
@@ -74,11 +75,11 @@ class SmartTrader(object):
     def _create_weights(self):
         with tf.variable_scope("weights"):
             self.weights = {
-                'out': tf.Variable(tf.random_normal([self.hidden_size, self.nclasses], mean=0, stddev=0.001),
-                                   name="weights")
+                'out': tf.get_variable("weights", [self.hidden_size, self.nclasses],
+                                       initializer=tf.random_normal_initializer(mean=0, stddev=0.01, seed=1))
             }
             self.biases = {
-                'out': tf.Variable(tf.random_normal([self.nclasses], mean=0, stddev=0.001), name="bias")
+                'out': tf.get_variable("bias", [self.nclasses], initializer=tf.random_normal_initializer(mean=0, stddev=0.01, seed=1))
             }
 
     def batch_norm_layer(self, signal, scope):
@@ -177,14 +178,19 @@ def train(trader, features, labels, train_steps=10000, batch_size=32, validation
                 print(hint)
 
 
-def predict(features, labels):
-    step = 30
-    input_size = 61
-    train_steps = 5000
-    batch_size = 32
-    learning_rate = 0.001
-    hidden_size = 8
-    nclasses = 1
+def calculate_cumulative_return(labels, pred):
+    cr = []
+    if len(labels) <= 0:
+        return cr
+    cr.append(1. * (1. + labels[0] * pred[0]))
+    for l in range(1, len(labels)):
+        cr.append(cr[l - 1] * (1 + labels[l] * pred[l]))
+    for i in range(len(cr)):
+        cr[i] = cr[i] - 1
+    return cr
+
+
+def predict(features, labels, step=30, input_size=61, learning_rate=0.001, hidden_size=8, nclasses=1):
     trader = SmartTrader(step, input_size, learning_rate, hidden_size, nclasses)
     trader.build_graph()
     saver = tf.train.Saver()
@@ -195,19 +201,25 @@ def predict(features, labels):
             saver.restore(sess, ckpt.model_checkpoint_path)
         pred, avg_pos = sess.run([trader.position, trader.avg_position],
                                  feed_dict={trader.x: features, trader.y: labels, trader.is_training: False})
-        print("ChangeRate\tPositionAdvice")
+
+        cr = calculate_cumulative_return(labels, pred)
+        print("changeRate\tpositionAdvice\tprincipal\tcumulativeReturn")
         for i in range(len(labels)):
-            print(str(labels[i][0]) + "\t" + str(pred[i][0]))
+            print(str(labels[i]) + "\t" + str(pred[i]) + "\t" + str(cr[i] + 1.) + "\t" + str(cr[i]))
+        #print("ChangeRate\tPositionAdvice")
+        #for i in range(len(labels)):
+        #    print(str(labels[i][0]) + "\t" + str(pred[i][0]))
 
 
 def main(operation='train'):
     step = 30
     input_size = 61
-    train_steps = 5000
-    batch_size = 32
-    learning_rate = 0.02
+    train_steps = 50000
+    batch_size = 512
+    learning_rate = 0.002
     hidden_size = 8
     nclasses = 1
+    validation_size = 600
 
     selector = ["ROCP", "OROCP", "HROCP", "LROCP", "MACD", "RSI", "VROCP", "BOLL", "MA", "VMA", "PRICE_VOLUME"]
     input_shape = [30, 61]  # [length of time series, length of feature]
@@ -222,11 +234,13 @@ def main(operation='train'):
     if operation == 'train':
         trader = SmartTrader(step, input_size, learning_rate, hidden_size, nclasses)
         trader.build_graph()
-        train(trader, moving_features, moving_labels, train_steps, batch_size)
+        train(trader, moving_features, moving_labels, train_steps, batch_size=batch_size, validation_size=validation_size)
     else:
-        predict(moving_features, moving_labels)
+        predict(moving_features[-validation_size:], moving_labels[-validation_size:])
 
 if __name__ == '__main__':
+    tf.set_random_seed(2)
+    seed(1)
     operation = 'train'
     if len(sys.argv) > 1:
         operation = sys.argv[1]
