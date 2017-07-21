@@ -17,6 +17,9 @@
 import tensorflow as tf
 from tensorflow.contrib import rnn
 import os
+
+from tensorflow.contrib.rnn import DropoutWrapper
+
 from rawdata import RawData, read_sample_data
 from dataset import DataSet
 from chart import extract_feature
@@ -55,6 +58,10 @@ class SmartTrader(object):
         self.cost = cost
         self.loss = None
         self.avg_position = None
+        self.keep_rate = None
+        self.x = None
+        self.y = None
+        self.is_training = None
 
     def _create_learning_rate(self):
         '''
@@ -71,6 +78,7 @@ class SmartTrader(object):
             self.x = tf.placeholder(tf.float32, shape=[None, self.step, self.input_size], name='history_feature')
             self.y = tf.placeholder(tf.float32, shape=[None, 1], name='target')
             self.is_training = tf.placeholder(tf.bool, name='mode')
+            self.keep_rate = tf.placeholder(tf.float32, name='kepp_rate')
 
     def _create_weights(self):
         with tf.variable_scope("weights"):
@@ -108,7 +116,8 @@ class SmartTrader(object):
         #with tf.device("/cpu:0"):
         xx = tf.unstack(self.x, self.step, 1)
         lstm_cell = rnn.LSTMCell(self.hidden_size, forget_bias=1.0)
-        outputs, states = rnn.static_rnn(lstm_cell, xx, dtype=tf.float32)
+        dropout_cell = DropoutWrapper(lstm_cell, input_keep_prob=self.keep_rate, output_keep_prob=self.keep_rate, state_keep_prob=self.keep_rate)
+        outputs, states = rnn.static_rnn(dropout_cell, xx, dtype=tf.float32)
         signal = tf.matmul(outputs[-1], self.weights['out']) + self.biases['out']
         scope = "activation_batch_norm"
         norm_signal = self.batch_norm_layer(signal, scope=scope)
@@ -161,14 +170,15 @@ def train(trader, features, labels, train_steps=10000, batch_size=32, validation
         for i in range(initial_step, initial_step + train_steps):
             batch_features, batch_labels = ds.next_batch(batch_size)
             _, loss, avg_pos, summary = sess.run([trader.optimizer, trader.loss, trader.avg_position, trader.summary_op],
-                                        feed_dict={trader.x: batch_features, trader.y: batch_labels, trader.is_training: True})
+                                        feed_dict={trader.x: batch_features, trader.y: batch_labels,
+                                                   trader.is_training: True, trader.keep_rate: 0.5})
             writer.add_summary(summary, global_step=i)
             if i % VERBOSE_STEP == 0:
                 hint = None
                 if i % VALIDATION_STEP == 0:
                     val_loss, val_avg_pos = sess.run([trader.loss, trader.avg_position],
                                            feed_dict={trader.x: val_features, trader.y: val_labels,
-                                           trader.is_training: False})
+                                           trader.is_training: False, trader.keep_rate: 1.})
                     hint = 'Average Train Loss at step {}: {:.7f} Average position {:.7f}, Validation Loss: {:.7f} Average Position: {:.7f}'.format(i, loss, avg_pos, val_loss, val_avg_pos)
                     if val_loss < min_validation_loss:
                         min_validation_loss = val_loss
@@ -200,7 +210,8 @@ def predict(features, labels, step=30, input_size=61, learning_rate=0.001, hidde
         if ckpt and ckpt.model_checkpoint_path:
             saver.restore(sess, ckpt.model_checkpoint_path)
         pred, avg_pos = sess.run([trader.position, trader.avg_position],
-                                 feed_dict={trader.x: features, trader.y: labels, trader.is_training: False})
+                                 feed_dict={trader.x: features, trader.y: labels,
+                                            trader.is_training: False, trader.keep_rate: 1.})
 
         cr = calculate_cumulative_return(labels, pred)
         print("changeRate\tpositionAdvice\tprincipal\tcumulativeReturn")
@@ -214,7 +225,7 @@ def predict(features, labels, step=30, input_size=61, learning_rate=0.001, hidde
 def main(operation='train'):
     step = 30
     input_size = 61
-    train_steps = 50000
+    train_steps = 100000
     batch_size = 512
     learning_rate = 0.002
     hidden_size = 8
