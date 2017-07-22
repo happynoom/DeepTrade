@@ -152,23 +152,20 @@ class SmartTrader(object):
         self._create_summary()
 
 
-def train(trader, features, labels, train_steps=10000, batch_size=32, validation_size=600):
+def train(trader, train_set, val_set, train_steps=10000, batch_size=32):
     initial_step = 1
-    train_features = features[:-validation_size]
-    train_labels = labels[:-validation_size]
-    val_features = features[-validation_size:]
-    val_labels = labels[-validation_size:]
+    val_features = val_set.images
+    val_labels = val_set.labels
     VERBOSE_STEP = 10  # int(len(train_features) / batch_size)
     VALIDATION_STEP = VERBOSE_STEP
 
     saver = tf.train.Saver()
     min_validation_loss = 100000000.
-    ds = DataSet(train_features, train_labels)
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
         writer = tf.summary.FileWriter("./graphs", sess.graph)
         for i in range(initial_step, initial_step + train_steps):
-            batch_features, batch_labels = ds.next_batch(batch_size)
+            batch_features, batch_labels = train_set.next_batch(batch_size)
             _, loss, avg_pos, summary = sess.run([trader.optimizer, trader.loss, trader.avg_position, trader.summary_op],
                                         feed_dict={trader.x: batch_features, trader.y: batch_labels,
                                                    trader.is_training: True, trader.keep_rate: 0.5})
@@ -200,7 +197,9 @@ def calculate_cumulative_return(labels, pred):
     return cr
 
 
-def predict(features, labels, step=30, input_size=61, learning_rate=0.001, hidden_size=8, nclasses=1):
+def predict(val_set, step=30, input_size=61, learning_rate=0.001, hidden_size=8, nclasses=1):
+    features = val_set.images
+    labels = val_set.labels
     trader = SmartTrader(step, input_size, learning_rate, hidden_size, nclasses)
     trader.build_graph()
     saver = tf.train.Saver()
@@ -222,7 +221,7 @@ def predict(features, labels, step=30, input_size=61, learning_rate=0.001, hidde
         #    print(str(labels[i][0]) + "\t" + str(pred[i][0]))
 
 
-def main(operation='train'):
+def main(operation='train', code=None):
     step = 30
     input_size = 61
     train_steps = 100000
@@ -234,25 +233,72 @@ def main(operation='train'):
 
     selector = ["ROCP", "OROCP", "HROCP", "LROCP", "MACD", "RSI", "VROCP", "BOLL", "MA", "VMA", "PRICE_VOLUME"]
     input_shape = [30, 61]  # [length of time series, length of feature]
-    raw_data = read_sample_data("toy_stock.csv")
-    moving_features, moving_labels = extract_feature(raw_data=raw_data, selector=selector, window=input_shape[0],
-                                                     with_label=True, flatten=False)
-    moving_features = numpy.asarray(moving_features)
-    moving_features = numpy.transpose(moving_features, [0, 2, 1])
-    moving_labels = numpy.asarray(moving_labels)
-    moving_labels = numpy.reshape(moving_labels, [moving_labels.shape[0], 1])
 
     if operation == 'train':
+        dataset_dir = "./dataset"
+        train_features = []
+        train_labels = []
+        val_features = []
+        val_labels = []
+        for filename in os.listdir(dataset_dir):
+            print("processing file: " + filename)
+            filepath = dataset_dir + "/" + filename
+            raw_data = read_sample_data(filepath)
+            moving_features, moving_labels = extract_feature(raw_data=raw_data, selector=selector, window=input_shape[0],
+                                                             with_label=True, flatten=False)
+            train_features.extend(moving_features[:-validation_size])
+            train_labels.extend(moving_labels[:-validation_size])
+            val_features.extend(moving_features[-validation_size:])
+            val_labels.extend(moving_labels[-validation_size:])
+
+        train_features = numpy.transpose(numpy.asarray(train_features), [0, 2, 1])
+        train_labels = numpy.asarray(train_labels)
+        train_labels = numpy.reshape(train_labels, [train_labels.shape[0], 1])
+        val_features = numpy.transpose(numpy.asarray(val_features), [0, 2, 1])
+        val_labels = numpy.asarray(val_labels)
+        val_labels = numpy.reshape(val_labels, [val_labels.shape[0], 1])
+        train_set = DataSet(train_features, train_labels)
+        val_set = DataSet(val_features, val_labels)
+
+        # raw_data = read_sample_data("toy_stock.csv")
+        # moving_features, moving_labels = extract_feature(raw_data=raw_data, selector=selector, window=input_shape[0],
+        #                                                 with_label=True, flatten=False)
+        # moving_features = numpy.asarray(moving_features)
+        # moving_features = numpy.transpose(moving_features, [0, 2, 1])
+        # moving_labels = numpy.asarray(moving_labels)
+        # moving_labels = numpy.reshape(moving_labels, [moving_labels.shape[0], 1])
+        # train_set = DataSet(moving_features[:-validation_size], moving_labels[:-validation_size])
+        # val_set = DataSet(moving_features[-validation_size:], moving_labels[-validation_size:])
+
         trader = SmartTrader(step, input_size, learning_rate, hidden_size, nclasses)
         trader.build_graph()
-        train(trader, moving_features, moving_labels, train_steps, batch_size=batch_size, validation_size=validation_size)
+        train(trader, train_set, val_set, train_steps, batch_size=batch_size)
+    elif operation == "predict":
+        predict_file_path = "./dataset/000001.csv"
+        if code is not None:
+            predict_file_path = "./dataset/%s.csv" % code
+        print("processing file %s" % predict_file_path)
+        raw_data = read_sample_data(predict_file_path)
+        moving_features, moving_labels = extract_feature(raw_data=raw_data, selector=selector, window=input_shape[0],
+                                                         with_label=True, flatten=False)
+        moving_features = numpy.asarray(moving_features)
+        moving_features = numpy.transpose(moving_features, [0, 2, 1])
+        moving_labels = numpy.asarray(moving_labels)
+        moving_labels = numpy.reshape(moving_labels, [moving_labels.shape[0], 1])
+        # train_set = DataSet(moving_features[:-validation_size], moving_labels[:-validation_size])
+        val_set = DataSet(moving_features[-validation_size:], moving_labels[-validation_size:])
+        predict(val_set)
+
     else:
-        predict(moving_features[-validation_size:], moving_labels[-validation_size:])
+        print("Operation not supported. ")
 
 if __name__ == '__main__':
     tf.set_random_seed(2)
     seed(1)
     operation = 'train'
+    code = None
     if len(sys.argv) > 1:
         operation = sys.argv[1]
-    main(operation)
+    if len(sys.argv) > 2:
+        code = sys.argv[2]
+    main(operation, code)
