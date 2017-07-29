@@ -99,10 +99,10 @@ class SmartTrader(object):
         '''
         # Note: is_training is tf.placeholder(tf.bool) type
         return tf.cond(self.is_training,
-                       lambda: batch_norm(signal, is_training=True,
-                                          center=True, scale=True, activation_fn=tf.nn.relu, decay=0.9, scope=scope),
-                       lambda: batch_norm(signal, is_training=False,
-                                          center=True, scale=True, activation_fn=tf.nn.relu, decay=0.9,
+                       lambda: batch_norm(signal, is_training=True, param_initializers={"beta": tf.constant_initializer(3.), "gamma": tf.constant_initializer(2.5)},
+                                          center=True, scale=True, activation_fn=tf.nn.relu, decay=1., scope=scope),
+                       lambda: batch_norm(signal, is_training=False, param_initializers={"beta": tf.constant_initializer(3.), "gamma": tf.constant_initializer(2.5)},
+                                          center=True, scale=True, activation_fn=tf.nn.relu, decay=1.,
                                           scope=scope, reuse=True))
 
     def _create_loss(self):
@@ -123,7 +123,7 @@ class SmartTrader(object):
         norm_signal = self.batch_norm_layer(signal, scope=scope)
         # batch_norm(signal, 0.9, center=True, scale=True, epsilon=0.001, activation_fn=tf.nn.relu6,
         #           is_training=is_training, scope="activation_batch_norm", reuse=False)
-        self.position = tf.nn.relu6(norm_signal) / 6.
+        self.position = tf.nn.relu6(norm_signal, name="relu_limit") / 6.
         self.avg_position = tf.reduce_mean(self.position)
         # self.cost = 0.0002
         self.loss = -100. * tf.reduce_mean(tf.multiply((self.y - self.cost), self.position, name="estimated_risk"))
@@ -226,10 +226,10 @@ def main(operation='train', code=None):
     input_size = 61
     train_steps = 1000000
     batch_size = 512
-    learning_rate = 0.002
+    learning_rate = 0.001
     hidden_size = 8
     nclasses = 1
-    validation_size = 600
+    validation_size = 700
     keep_rate = 0.7
 
     selector = ["ROCP", "OROCP", "HROCP", "LROCP", "MACD", "RSI", "VROCP", "BOLL", "MA", "VMA", "PRICE_VOLUME"]
@@ -242,6 +242,8 @@ def main(operation='train', code=None):
         val_features = []
         val_labels = []
         for filename in os.listdir(dataset_dir):
+            if filename != '000001.csv':
+                continue
             print("processing file: " + filename)
             filepath = dataset_dir + "/" + filename
             raw_data = read_sample_data(filepath)
