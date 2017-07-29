@@ -157,7 +157,7 @@ def train(trader, train_set, val_set, train_steps=10000, batch_size=32, keep_rat
     val_features = val_set.images
     val_labels = val_set.labels
     VERBOSE_STEP = 10  # int(len(train_features) / batch_size)
-    VALIDATION_STEP = VERBOSE_STEP
+    VALIDATION_STEP = VERBOSE_STEP * 10
 
     saver = tf.train.Saver()
     min_validation_loss = 100000000.
