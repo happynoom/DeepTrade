@@ -242,8 +242,8 @@ def main(operation='train', code=None):
         val_features = []
         val_labels = []
         for filename in os.listdir(dataset_dir):
-            if filename != '000001.csv':
-                continue
+            #if filename != '000001.csv':
+            #    continue
             print("processing file: " + filename)
             filepath = dataset_dir + "/" + filename
             raw_data = read_sample_data(filepath)
