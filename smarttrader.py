@@ -19,7 +19,7 @@ from tensorflow.contrib import rnn
 import os
 
 from tensorflow.contrib.rnn import DropoutWrapper
-
+from tensorflow.python.ops.init_ops import glorot_uniform_initializer
 from rawdata import RawData, read_sample_data
 from dataset import DataSet
 from chart import extract_feature
@@ -84,10 +84,10 @@ class SmartTrader(object):
         with tf.variable_scope("weights"):
             self.weights = {
                 'out': tf.get_variable("weights", [self.hidden_size, self.nclasses],
-                                       initializer=tf.random_normal_initializer(mean=0, stddev=0.01, seed=1))
+                                       initializer=glorot_uniform_initializer())
             }
             self.biases = {
-                'out': tf.get_variable("bias", [self.nclasses], initializer=tf.random_normal_initializer(mean=0, stddev=0.01, seed=1))
+                'out': tf.get_variable("bias", [self.nclasses], initializer=glorot_uniform_initializer())
             }
 
     def batch_norm_layer(self, signal, scope):
@@ -115,7 +115,7 @@ class SmartTrader(object):
         '''
         #with tf.device("/cpu:0"):
         xx = tf.unstack(self.x, self.step, 1)
-        lstm_cell = rnn.LSTMCell(self.hidden_size, forget_bias=1.0)
+        lstm_cell = rnn.LSTMCell(self.hidden_size, forget_bias=1.0, initializer=glorot_uniform_initializer())
         dropout_cell = DropoutWrapper(lstm_cell, input_keep_prob=self.keep_rate, output_keep_prob=self.keep_rate, state_keep_prob=self.keep_rate)
         outputs, states = rnn.static_rnn(dropout_cell, xx, dtype=tf.float32)
         signal = tf.matmul(outputs[-1], self.weights['out']) + self.biases['out']
