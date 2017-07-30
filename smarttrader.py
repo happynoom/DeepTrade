@@ -227,7 +227,7 @@ def main(operation='train', code=None):
     train_steps = 1000000
     batch_size = 512
     learning_rate = 0.001
-    hidden_size = 8
+    hidden_size = 14
     nclasses = 1
     validation_size = 700
     keep_rate = 0.7
