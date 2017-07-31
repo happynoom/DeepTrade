@@ -290,7 +290,7 @@ def main(operation='train', code=None):
         moving_labels = numpy.reshape(moving_labels, [moving_labels.shape[0], 1])
         # train_set = DataSet(moving_features[:-validation_size], moving_labels[:-validation_size])
         val_set = DataSet(moving_features[-validation_size:], moving_labels[-validation_size:])
-        predict(val_set)
+        predict(val_set, step=step, input_size=input_size, learning_rate=learning_rate, hidden_size=hidden_size, nclasses=nclasses)
 
     else:
         print("Operation not supported. ")
