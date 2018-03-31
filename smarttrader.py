@@ -58,6 +58,7 @@ class SmartTrader(object):
         self.cost = cost
         self.loss = None
         self.avg_position = None
+        self.trade_frequency = None
         self.keep_rate = None
         self.x = None
         self.y = None
@@ -125,6 +126,8 @@ class SmartTrader(object):
         #           is_training=is_training, scope="activation_batch_norm", reuse=False)
         self.position = tf.nn.relu6(norm_signal, name="relu_limit") / 6.
         self.avg_position = tf.reduce_mean(self.position)
+        trade = tf.slice(self.position, [1, 0], tf.shape(self.position) - [1, 0]) - tf.slice(self.position, [0, 0], tf.shape(self.position) - [1, 0])
+        self.trade_frequency = tf.reduce_sum(tf.abs(trade))
         # self.cost = 0.0002
         self.loss = -100. * tf.reduce_mean(tf.multiply((self.y - self.cost), self.position, name="estimated_risk"))
 
@@ -157,7 +160,7 @@ def train(trader, train_set, val_set, train_steps=10000, batch_size=32, keep_rat
     val_features = val_set.images
     val_labels = val_set.labels
     VERBOSE_STEP = 10  # int(len(train_features) / batch_size)
-    VALIDATION_STEP = VERBOSE_STEP * 100
+    VALIDATION_STEP = VERBOSE_STEP * 10
 
     saver = tf.train.Saver()
     min_validation_loss = 100000000.
@@ -173,10 +176,10 @@ def train(trader, train_set, val_set, train_steps=10000, batch_size=32, keep_rat
             if i % VERBOSE_STEP == 0:
                 hint = None
                 if i % VALIDATION_STEP == 0:
-                    val_loss, val_avg_pos = sess.run([trader.loss, trader.avg_position],
+                    val_loss, val_avg_pos, val_trade_frequency = sess.run([trader.loss, trader.avg_position, trader.trade_frequency],
                                            feed_dict={trader.x: val_features, trader.y: val_labels,
                                            trader.is_training: False, trader.keep_rate: 1.})
-                    hint = 'Average Train Loss at step {}: {:.7f} Average position {:.7f}, Validation Loss: {:.7f} Average Position: {:.7f}'.format(i, loss, avg_pos, val_loss, val_avg_pos)
+                    hint = 'Average Train Loss at step {}: {:.7f} Average position {:.7f}, Validation Loss: {:.7f} Average Position: {:.7f} Trade Frequency: {:.7f}'.format(i, loss, avg_pos, val_loss, val_avg_pos, val_trade_frequency)
                     if val_loss < min_validation_loss:
                         min_validation_loss = val_loss
                         saver.save(sess, "./checkpoint/best_model", i)
@@ -223,17 +226,17 @@ def predict(val_set, step=30, input_size=61, learning_rate=0.001, hidden_size=8,
 
 def main(operation='train', code=None):
     step = 30
-    input_size = 61
+    input_size = 73
     train_steps = 1000000
     batch_size = 512
-    learning_rate = 0.001
-    hidden_size = 14
+    learning_rate = 0.0002
+    hidden_size = 16
     nclasses = 1
     validation_size = 700
     keep_rate = 0.7
+    selector = ["ROCP", "OROCP", "HROCP", "LROCP", "MACD", "RSI", "VROCP", "BOLL", "MA", "VMA", "PRICE_VOLUME", "CROSS_PRICE"]
 
-    selector = ["ROCP", "OROCP", "HROCP", "LROCP", "MACD", "RSI", "VROCP", "BOLL", "MA", "VMA", "PRICE_VOLUME"]
-    input_shape = [30, 61]  # [length of time series, length of feature]
+    input_shape = [step, input_size]  # [length of time series, length of feature]
 
     if operation == 'train':
         dataset_dir = "./dataset"
@@ -242,8 +245,8 @@ def main(operation='train', code=None):
         val_features = []
         val_labels = []
         for filename in os.listdir(dataset_dir):
-            #if filename != '000001.csv':
-            #    continue
+            if filename != '000001.csv':
+                continue
             print("processing file: " + filename)
             filepath = dataset_dir + "/" + filename
             raw_data = read_sample_data(filepath)
