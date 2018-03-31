@@ -57,6 +57,7 @@ class SmartTrader(object):
         self.biases = None
         self.cost = cost
         self.loss = None
+        self.val_loss = None
         self.avg_position = None
         self.trade_frequency = None
         self.keep_rate = None
@@ -130,6 +131,7 @@ class SmartTrader(object):
         self.trade_frequency = tf.reduce_sum(tf.abs(trade))
         # self.cost = 0.0002
         self.loss = -100. * tf.reduce_mean(tf.multiply((self.y - self.cost), self.position, name="estimated_risk"))
+        self.val_loss = -100. * tf.reduce_mean(tf.multiply((self.y - self.cost), self.position, name="estimated_risk"))
 
     def _create_optimizer(self):
         '''
@@ -144,6 +146,8 @@ class SmartTrader(object):
         tf.summary.histogram("histogram loss", self.loss)
         tf.summary.scalar("average position", self.avg_position)
         tf.summary.histogram("histogram position", self.avg_position)
+        tf.summary.scalar("val_loss", self.val_loss)
+        tf.summary.histogram("histogram val_loss", self.val_loss)
         self.summary_op = tf.summary.merge_all()
 
     def build_graph(self):
@@ -176,7 +180,7 @@ def train(trader, train_set, val_set, train_steps=10000, batch_size=32, keep_rat
             if i % VERBOSE_STEP == 0:
                 hint = None
                 if i % VALIDATION_STEP == 0:
-                    val_loss, val_avg_pos, val_trade_frequency = sess.run([trader.loss, trader.avg_position, trader.trade_frequency],
+                    val_loss, val_avg_pos, val_trade_frequency = sess.run([trader.val_loss, trader.avg_position, trader.trade_frequency],
                                            feed_dict={trader.x: val_features, trader.y: val_labels,
                                            trader.is_training: False, trader.keep_rate: 1.})
                     hint = 'Average Train Loss at step {}: {:.7f} Average position {:.7f}, Validation Loss: {:.7f} Average Position: {:.7f} Trade Frequency: {:.7f}'.format(i, loss, avg_pos, val_loss, val_avg_pos, val_trade_frequency)
