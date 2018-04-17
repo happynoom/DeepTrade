@@ -38,8 +38,8 @@ ta-lib, ta-lib for python, numpy, tensorflow
 
 ## 捐赠
 
-![image](wx_code.jpg){:height="50%" width="50%"}
-![image](zfb_code.jpg){:height="50%" width="50%"}
+![image](wx_code.jpg)
+![image](zfb_code.jpg)
 
 ## 致谢
 
