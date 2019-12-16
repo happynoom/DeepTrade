@@ -32,6 +32,22 @@ P为网络输出的集合，也就是持仓策略的集合，R为相应的第二
 
 ta-lib, ta-lib for python, numpy, tensorflow
 
+## 版权声明
+
+开源版本对学术应用完全免费，使用时请引用出处；商业应用需要获得授权。另外，该项目已经有重大更新，后续版本的授权请联系：happynoom@163.com
+
+## 捐赠
+
+![image](wx_code.jpg)
+![image](zfb_code.jpg)
+
+## 致谢
+
+感谢chenli0830(李辰)贡献的宝贵代码和慷慨捐赠！
+
+Thanks to chenli0830(Chen Li) for his valuable source code and donation!
+
+
 
 A LSTM model using Risk Estimation loss function for trades in market
 ===
@@ -76,9 +92,9 @@ P is a set of our output, and R is the set of corresponding rates of price chang
 
 ta-lib, ta-lib for python, numpy, tensorflow
 
-## Liecence
+## Licence
 
-The author is Xiaoyu Fang from China. Please quot the source whenever you use it.
+The author is Xiaoyu Fang from China. Please quot the source whenever you use it. This project has key update already. Contact happynoom@163.com to buy a licence.
 
 ## Bug Report
 
