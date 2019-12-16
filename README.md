@@ -36,10 +36,6 @@ ta-lib, ta-lib for python, numpy, tensorflow
 
 开源版本对学术应用完全免费，使用时请引用出处；商业应用需要获得授权。另外，该项目已经有重大更新，后续版本的授权请联系：happynoom@163.com
 
-## 捐赠
-
-![image](wx_code.jpg)
-![image](zfb_code.jpg)
 
 ## 致谢
 
