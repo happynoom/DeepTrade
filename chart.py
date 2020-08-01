@@ -25,16 +25,16 @@ class ChartFeature(object):
         self.supported = {"ROCP", "OROCP", "HROCP", "LROCP", "MACD", "RSI", "VROCP", "BOLL", "MA", "VMA",
                           "PRICE_VOLUME", "CROSS_PRICE"}
         self.feature = []
-        self.prospective = 2
+        self.prospective = 1
         self.recall_period = 2
 
     def make_label(self, prices):
-        ratio = 1.0
-        decay = 1
+        ratio = 0.5
+        decay = 0.9
         label = 0.0
         for i in range(1, len(prices)):
-            label = label + (prices[i] / prices[0] - 1.0) / ratio
-            ratio = ratio / decay
+            label = label + (prices[i] / prices[0] - 1.0) * ratio
+            ratio = ratio * decay
 
         return label / (len(prices) - 1)
 
